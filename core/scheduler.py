@@ -9,7 +9,13 @@ CHECK_INTERVAL_MS = 60_000
 
 
 class ReviewScheduler(QObject):
-    """Periodically checks for due reviews, notifies the user, and advances stages.
+    """Periodically checks for due reviews and notifies the user.
+
+    This class never advances a review stage itself -- that only happens
+    when the user explicitly confirms a review in the UI. This guarantees a
+    review can never be silently skipped: an unreviewed topic keeps
+    triggering a fresh notification every day until it is actually marked
+    as reviewed.
 
     This class has no knowledge of any UI widget. It only depends on the
     repository and the notification service, which keeps the scheduling
@@ -34,13 +40,13 @@ class ReviewScheduler(QObject):
         self._timer.stop()
 
     def check_due_reviews(self) -> None:
-        due_topics = self._repository.get_due_topics()
-        if not due_topics:
+        pending_topics = self._repository.get_topics_pending_notification()
+        if not pending_topics:
             return
 
-        topic_names = [topic.topic_name for topic in due_topics]
-        for topic in due_topics:
-            self._repository.advance_review_stage(topic)
+        topic_names = [topic.topic_name for topic in pending_topics]
+        for topic in pending_topics:
+            self._repository.mark_notified(topic.id)
 
         self._notification_service.notify_due_topics(topic_names)
         self.topics_updated.emit()

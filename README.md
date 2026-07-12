@@ -7,12 +7,19 @@ spaced repetition. Nothing else.
 
 1. You click **Add Topic** and type a topic name (e.g. `Binary Search`).
 2. The learning date is set automatically to today.
-3. A review schedule is generated automatically for **Day 1, 3, 7, 14, 30, 60, 120**.
-4. The app checks every minute for topics due today. When one is due, it sends a
-   native desktop notification and automatically advances that topic to its
-   next review stage.
-5. Closing the window does not quit the app — it keeps running from the
+3. A review schedule is generated automatically for **Day 1, 3, 7, 21, 30, 60,
+   120, 240, 365** — fast repetition early to consolidate the memory, then
+   progressively wider spacing for long-term retention.
+4. The app checks every minute for topics due today. When one is due, it sends
+   a native desktop notification.
+5. **The review only counts once you tick "Mark as reviewed" on that topic's
+   card.** Nothing advances automatically — if you don't tick it, the topic
+   keeps showing up as due and you'll get reminded again the next day, so a
+   review can never be silently skipped.
+6. Closing the window does not quit the app — it keeps running from the
    system tray, still checking dates and sending notifications.
+7. The app can start automatically when you turn on your computer (see
+   below).
 
 There are no notes, flashcards, AI features, accounts, cloud sync, statistics,
 or calendars. Just topics and their review schedule.
@@ -47,12 +54,16 @@ The app stores its SQLite database at `~/.study_reminder/study_reminder.db`
 - **Search box** — filters the topic list live as you type.
 - **Topic card** — shows the topic name, learning date, and next review date.
   Its border color and badge reflect status: scheduled, due today, overdue,
-  or completed (all 7 stages finished).
+  or completed (all 9 stages finished).
+- **"Mark as reviewed" checkbox** — appears only on cards that are due or
+  overdue. Ticking it is the only thing that advances a topic to its next
+  stage. Until you tick it, the topic stays due and keeps notifying you.
 - **Right-click a card** — lets you delete a topic you added by mistake.
 - **Closing the window** — hides it to the system tray; the app keeps running.
-- **Tray icon** — right-click for **Open** (show the window again) or
-  **Exit** (fully quit the app). Double-clicking the tray icon also opens
-  the window.
+- **Tray icon** — right-click for **Open** (show the window again),
+  **Start with Windows** (toggle auto-launch at login — only shown/functional
+  in the packaged `.exe`, not when running from source), or **Exit** (fully
+  quit the app). Double-clicking the tray icon also opens the window.
 
 ## Architecture
 
@@ -63,7 +74,8 @@ study_reminder/
 ├── main.py                      # Composition root: wires everything together
 ├── core/
 │   ├── scheduler.py              # ReviewScheduler — runs every minute, has no UI dependency
-│   └── notification_service.py   # Wraps native tray notifications
+│   ├── notification_service.py   # Wraps native tray notifications
+│   └── startup_manager.py        # Windows "start at login" via the Run registry key
 ├── database/
 │   ├── database.py                # SQLite connection + schema owner
 │   ├── repository.py              # Only place that runs SQL (TopicRepository)
@@ -87,14 +99,25 @@ study_reminder/
   SQLite. The UI and scheduler never write SQL.
 - **Single source of truth for scheduling** — `Topic.compute_next_review_date`
   in `models.py` is the only place review intervals are calculated, so the
-  7-stage schedule can't drift between features.
+  9-stage schedule can't drift between features.
+- **Reviews are never auto-completed** — `ReviewScheduler` only reads
+  (`get_topics_pending_notification`) and marks topics as notified; only
+  `TopicRepository.advance_review_stage`, triggered by the "Mark as
+  reviewed" checkbox, moves a topic to its next stage. This guarantees a
+  review is only counted when it actually happens.
 - **No manual date entry anywhere** — the user only ever types a topic name.
 
 ## Packaging as a standalone .exe (optional)
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconsole --onefile --name "StudyReminder" main.py
+pyinstaller --noconsole --onefile --icon="assets/icons/app_icon.ico" --name "StudyReminder" main.py
 ```
 
 The generated executable will be in `dist/StudyReminder.exe`.
+
+> **Start with Windows** only works for this packaged `.exe` — the app
+> detects whether it's running as a frozen executable and silently skips
+> registering itself for auto-start when run as a plain Python script.
+> On first launch of the `.exe`, it registers itself to start at login
+> automatically; you can turn this off any time from the tray icon menu.

@@ -132,7 +132,15 @@ class MainWindow(QMainWindow):
         for topic in topics:
             card = TopicCard(topic, self._list_container)
             card.delete_requested.connect(self._handle_delete_topic)
+            card.review_confirmed.connect(self._handle_review_confirmed)
             self._list_layout.insertWidget(self._list_layout.count() - 1, card)
+
+    def _handle_review_confirmed(self, topic_id: int) -> None:
+        topic = self._repository.get_topic_by_id(topic_id)
+        if topic is None:
+            return
+        self._repository.advance_review_stage(topic)
+        self.refresh_topics(self.current_search_text())
 
     def _handle_delete_topic(self, topic_id: int) -> None:
         confirmation = QMessageBox.question(

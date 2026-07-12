@@ -185,6 +185,35 @@ QLabel#emptyStateLabel {
     background: transparent;
 }
 
+QCheckBox#reviewCheckbox {
+    color: #C7C9D4;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    spacing: 6px;
+}
+
+QCheckBox#reviewCheckbox::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #3A3D4A;
+    background-color: #14151A;
+}
+
+QCheckBox#reviewCheckbox::indicator:hover {
+    border: 1px solid #7C5CFF;
+}
+
+QCheckBox#reviewCheckbox::indicator:checked {
+    background-color: #3AD68C;
+    border: 1px solid #3AD68C;
+}
+
+QCheckBox#reviewCheckbox:disabled {
+    color: #55575E;
+}
+
 QMenu {
     background-color: #1E2028;
     border: 1px solid #2B2E38;

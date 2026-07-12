@@ -14,7 +14,8 @@ class Database:
         topic_name TEXT NOT NULL,
         learning_date TEXT NOT NULL,
         current_review_stage INTEGER NOT NULL DEFAULT 0,
-        next_review_date TEXT
+        next_review_date TEXT,
+        last_notified_date TEXT
     );
     """
 
@@ -28,6 +29,16 @@ class Database:
     def _initialize_schema(self) -> None:
         with self._connection:
             self._connection.execute(self.SCHEMA)
+        self._run_migrations()
+
+    def _run_migrations(self) -> None:
+        """Adds columns introduced after the initial release to existing databases."""
+        existing_columns = {
+            row["name"] for row in self._connection.execute("PRAGMA table_info(topics)").fetchall()
+        }
+        if "last_notified_date" not in existing_columns:
+            with self._connection:
+                self._connection.execute("ALTER TABLE topics ADD COLUMN last_notified_date TEXT")
 
     @property
     def connection(self) -> sqlite3.Connection:

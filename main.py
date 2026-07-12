@@ -8,6 +8,12 @@ from PyQt6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from core.notification_service import NotificationService
 from core.scheduler import ReviewScheduler
+from core.startup_manager import (
+    disable_startup,
+    enable_startup,
+    is_startup_enabled,
+    is_supported as is_startup_supported,
+)
 from database.database import Database
 from database.repository import TopicRepository
 from ui.icon_factory import create_app_icon
@@ -57,7 +63,14 @@ def main() -> None:
     database = Database(DATABASE_PATH)
     repository = TopicRepository(database)
 
-    tray_icon = TrayIcon(app_icon)
+    startup_supported = is_startup_supported()
+    if startup_supported and not is_startup_enabled():
+        enable_startup()
+
+    tray_icon = TrayIcon(app_icon, show_startup_option=startup_supported)
+    if startup_supported:
+        tray_icon.set_startup_checked(is_startup_enabled())
+
     notification_service = NotificationService(tray_icon)
     scheduler = ReviewScheduler(repository, notification_service)
 
@@ -77,8 +90,15 @@ def main() -> None:
     def handle_topics_updated() -> None:
         main_window.refresh_topics(main_window.current_search_text())
 
+    def handle_startup_toggle(enabled: bool) -> None:
+        if enabled:
+            enable_startup()
+        else:
+            disable_startup()
+
     tray_icon.open_requested.connect(handle_open)
     tray_icon.exit_requested.connect(handle_exit)
+    tray_icon.startup_toggled.connect(handle_startup_toggle)
     scheduler.topics_updated.connect(handle_topics_updated)
 
     tray_icon.show()

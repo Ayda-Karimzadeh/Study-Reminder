@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import date
+
 from PyQt6.QtCore import Qt, QPropertyAnimation, pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QGraphicsDropShadowEffect,
     QHBoxLayout,
@@ -22,11 +25,13 @@ class TopicCard(QFrame):
     """A single card showing a topic's name, learning date, and next review date."""
 
     delete_requested = pyqtSignal(int)
+    review_confirmed = pyqtSignal(int)
 
     def __init__(self, topic: Topic, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._topic = topic
         self._entry_animation: QPropertyAnimation | None = None
+        self._review_checkbox: QCheckBox | None = None
 
         self.setObjectName("topicCard")
         self.setProperty("status", self._status_key())
@@ -54,13 +59,26 @@ class TopicCard(QFrame):
         text_layout.addWidget(name_label)
         text_layout.addWidget(meta_label)
 
+        side_layout = QVBoxLayout()
+        side_layout.setSpacing(8)
+        side_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         status_label = QLabel(self._status_text())
         status_label.setObjectName("statusBadge")
         status_label.setProperty("status", self._status_key())
         status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        side_layout.addWidget(status_label)
+
+        if self._topic.is_due and not self._topic.is_completed:
+            checkbox = QCheckBox("Mark as reviewed")
+            checkbox.setObjectName("reviewCheckbox")
+            checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
+            checkbox.stateChanged.connect(self._handle_review_toggled)
+            side_layout.addWidget(checkbox)
+            self._review_checkbox = checkbox
 
         layout.addLayout(text_layout, 1)
-        layout.addWidget(status_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        layout.addLayout(side_layout, 0)
 
     def _meta_text(self) -> str:
         learned = self._topic.learning_date.strftime("%b %d, %Y")
@@ -76,7 +94,7 @@ class TopicCard(QFrame):
             return "Overdue"
         if self._topic.is_due:
             return "Due today"
-        days_remaining = (self._topic.next_review_date - self._topic.next_review_date.today()).days
+        days_remaining = (self._topic.next_review_date - date.today()).days
         return f"In {days_remaining} day{'s' if days_remaining != 1 else ''}"
 
     def _status_key(self) -> str:
@@ -101,6 +119,13 @@ class TopicCard(QFrame):
         animation.setEndValue(_SHADOW_BLUR_RADIUS)
         animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
         self._entry_animation = animation
+
+    def _handle_review_toggled(self, state: int) -> None:
+        if state != Qt.CheckState.Checked.value:
+            return
+        if self._review_checkbox is not None:
+            self._review_checkbox.setEnabled(False)
+        self.review_confirmed.emit(self._topic.id)
 
     def _show_context_menu(self, position) -> None:
         menu = QMenu(self)

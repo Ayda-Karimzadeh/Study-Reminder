@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Optional
 
-REVIEW_INTERVALS_DAYS: tuple[int, ...] = (1, 3, 7, 14, 30, 60, 120)
+# Spaced repetition schedule: fast consolidation early (1/3/7/21/30 days),
+# then progressively wider spacing for long-term retention (roughly doubling
+# each stage), capped with a one-year checkpoint.
+REVIEW_INTERVALS_DAYS: tuple[int, ...] = (1, 3, 7, 21, 30, 60, 120, 240, 365)
 
 
 @dataclass(slots=True)
@@ -16,6 +19,7 @@ class Topic:
     learning_date: date
     current_review_stage: int
     next_review_date: Optional[date]
+    last_notified_date: Optional[date] = None
 
     @property
     def is_completed(self) -> bool:
