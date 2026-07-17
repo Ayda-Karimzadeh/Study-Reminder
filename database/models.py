@@ -4,9 +4,11 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Optional
 
-# Spaced repetition schedule: fast consolidation early (1/3/7/21/30 days),
-# then progressively wider spacing for long-term retention (roughly doubling
-# each stage), capped with a one-year checkpoint.
+# Spaced repetition schedule. The first review is always this many days
+# after the learning date. Every review after that is this many days after
+# the *previous review was actually confirmed* -- not after the original
+# learning date -- so reviewing late never compresses the following
+# reviews into an immediate backlog.
 REVIEW_INTERVALS_DAYS: tuple[int, ...] = (1, 3, 7, 21, 30, 60, 120, 240, 365)
 
 
@@ -38,8 +40,13 @@ class Topic:
         return self.next_review_date <= date.today()
 
     @staticmethod
-    def compute_next_review_date(learning_date: date, stage: int) -> Optional[date]:
-        """Returns the next review date for a given stage, or None once all stages are complete."""
+    def compute_next_review_date(base_date: date, stage: int) -> Optional[date]:
+        """Returns the review date for a given stage, or None once all stages are complete.
+
+        `base_date` is the learning date when computing the very first
+        review, and the date of the just-confirmed review for every stage
+        after that.
+        """
         if stage < 0 or stage >= len(REVIEW_INTERVALS_DAYS):
             return None
-        return learning_date + timedelta(days=REVIEW_INTERVALS_DAYS[stage])
+        return base_date + timedelta(days=REVIEW_INTERVALS_DAYS[stage])

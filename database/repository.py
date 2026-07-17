@@ -84,13 +84,19 @@ class TopicRepository:
         self._db.connection.commit()
 
     def advance_review_stage(self, topic: Topic) -> Topic:
-        """Advances a topic to its next stage. Only called after the user
+        """Advances a topic to its next stage after a confirmed review.
 
-        explicitly confirms a review took place (never automatically), so a
-        review is never silently marked as done.
+        The next review date is computed from *today* (the day the review
+        actually happened), not from the original learning date. This way,
+        reviewing late never pushes the following reviews into an immediate
+        backlog -- each interval always starts counting from the moment the
+        review was actually confirmed.
+
+        Only called after the user explicitly confirms a review took place
+        (never automatically), so a review is never silently marked as done.
         """
         new_stage = topic.current_review_stage + 1
-        new_next_review_date = Topic.compute_next_review_date(topic.learning_date, new_stage)
+        new_next_review_date = Topic.compute_next_review_date(date.today(), new_stage)
         self._db.connection.execute(
             "UPDATE topics SET current_review_stage = ?, next_review_date = ?, "
             "last_notified_date = NULL WHERE id = ?",
