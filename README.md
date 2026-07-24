@@ -9,7 +9,11 @@ spaced repetition. Nothing else.
 2. The learning date is set automatically to today.
 3. A review schedule is generated automatically for **Day 1, 3, 7, 21, 30, 60,
    120, 240, 365** — fast repetition early to consolidate the memory, then
-   progressively wider spacing for long-term retention.
+   progressively wider spacing for long-term retention. Only the first
+   review is counted from the learning date; every review after that is
+   counted from the date the *previous* review was actually confirmed, so
+   reviewing late never compresses the following reviews into an instant
+   backlog.
 4. The app checks every minute for topics due today. When one is due, it sends
    a native desktop notification.
 5. **The review only counts once you tick "Mark as reviewed" on that topic's
@@ -99,7 +103,9 @@ study_reminder/
   SQLite. The UI and scheduler never write SQL.
 - **Single source of truth for scheduling** — `Topic.compute_next_review_date`
   in `models.py` is the only place review intervals are calculated, so the
-  9-stage schedule can't drift between features.
+  9-stage schedule can't drift between features. Every review after the
+  first is scheduled from the date it was actually confirmed, not from a
+  fixed origin date, so a late review never creates a compounding backlog.
 - **Reviews are never auto-completed** — `ReviewScheduler` only reads
   (`get_topics_pending_notification`) and marks topics as notified; only
   `TopicRepository.advance_review_stage`, triggered by the "Mark as
@@ -121,3 +127,15 @@ The generated executable will be in `dist/StudyReminder.exe`.
 > registering itself for auto-start when run as a plain Python script.
 > On first launch of the `.exe`, it registers itself to start at login
 > automatically; you can turn this off any time from the tray icon menu.
+
+## Version history
+
+- **v2.0.1** — Fixed: reviewing a topic late no longer pushes every
+  following review into an immediate backlog. Each review after the first
+  is now scheduled from the date it was actually confirmed, not from the
+  original learning date.
+- **v2.0.0** — Reviews now require manual confirmation via a "Mark as
+  reviewed" checkbox instead of advancing automatically. Updated schedule
+  to Day 1, 3, 7, 21, 30, 60, 120, 240, 365. Added "Start with Windows"
+  support.
+- **v1.0.0** — Initial release.
